@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -24,39 +23,48 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const budget = await prisma.monthlyBudget.findUnique({
-      where: {
-        userId_month_year: {
-          userId: session.user.id,
-          month,
-          year,
-        },
-      },
-    })
+    // Get budget for the month
+    const { data: budget, error: budgetError } = await supabase
+      .from('monthly_budgets')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('month', month)
+      .eq('year', year)
+      .single()
+
+    if (budgetError && budgetError.code !== 'PGRST116') {
+      console.error('Error fetching budget:', budgetError)
+      return NextResponse.json(
+        { error: 'Failed to fetch budget' },
+        { status: 500 }
+      )
+    }
 
     // Calculate total spent for the month
-    const startOfMonth = new Date(year, month - 1, 1)
-    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
+    const startOfMonth = `${year}-${month.toString().padStart(2, '0')}-01`
+    const endOfMonth = new Date(year, month, 0).toISOString().split('T')[0]
 
-    const payments = await prisma.payment.aggregate({
-      where: {
-        userId: session.user.id,
-        date: {
-          gte: startOfMonth,
-          lte: endOfMonth,
-        },
-      },
-      _sum: {
-        amount: true,
-      },
-    })
+    const { data: payments, error: paymentsError } = await supabase
+      .from('payments')
+      .select('amount')
+      .eq('user_id', user.id)
+      .gte('date', startOfMonth)
+      .lte('date', endOfMonth)
 
-    const totalSpent = payments._sum.amount || 0
+    if (paymentsError) {
+      console.error('Error fetching payments:', paymentsError)
+      return NextResponse.json(
+        { error: 'Failed to fetch payments' },
+        { status: 500 }
+      )
+    }
+
+    const totalSpent = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
 
     return NextResponse.json({
-      budget,
+      budget: budget || null,
       totalSpent,
-      remaining: budget ? budget.salary - totalSpent : null,
+      remaining: budget ? Number(budget.salary) - totalSpent : null,
     })
   } catch (error) {
     console.error('Error fetching budget:', error)
@@ -69,9 +77,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -85,24 +94,54 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const budget = await prisma.monthlyBudget.upsert({
-      where: {
-        userId_month_year: {
-          userId: session.user.id,
+    // Try to update existing budget first
+    const { data: existingBudget } = await supabase
+      .from('monthly_budgets')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('month', parseInt(month))
+      .eq('year', parseInt(year))
+      .single()
+
+    let budget
+    let error
+
+    if (existingBudget) {
+      const result = await supabase
+        .from('monthly_budgets')
+        .update({
+          salary: parseFloat(salary),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingBudget.id)
+        .select()
+        .single()
+
+      budget = result.data
+      error = result.error
+    } else {
+      const result = await supabase
+        .from('monthly_budgets')
+        .insert({
           month: parseInt(month),
           year: parseInt(year),
-        },
-      },
-      update: {
-        salary: parseFloat(salary),
-      },
-      create: {
-        month: parseInt(month),
-        year: parseInt(year),
-        salary: parseFloat(salary),
-        userId: session.user.id,
-      },
-    })
+          salary: parseFloat(salary),
+          user_id: user.id,
+        })
+        .select()
+        .single()
+
+      budget = result.data
+      error = result.error
+    }
+
+    if (error) {
+      console.error('Error saving budget:', error)
+      return NextResponse.json(
+        { error: 'Failed to save budget' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(budget, { status: 201 })
   } catch (error) {

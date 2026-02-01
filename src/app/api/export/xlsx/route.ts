@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 import * as XLSX from 'xlsx'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -18,38 +17,37 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
-    const where: {
-      userId: string
-      date?: { gte?: Date; lte?: Date }
-    } = {
-      userId: session.user.id,
+    let query = supabase
+      .from('payments')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+
+    if (startDate) {
+      query = query.gte('date', startDate)
+    }
+    if (endDate) {
+      query = query.lte('date', endDate)
     }
 
-    if (startDate || endDate) {
-      where.date = {}
-      if (startDate) {
-        where.date.gte = new Date(startDate)
-      }
-      if (endDate) {
-        const end = new Date(endDate)
-        end.setHours(23, 59, 59, 999)
-        where.date.lte = end
-      }
+    const { data: payments, error } = await query
+
+    if (error) {
+      console.error('Error fetching payments:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch payments' },
+        { status: 500 }
+      )
     }
 
-    const payments = await prisma.payment.findMany({
-      where,
-      orderBy: { date: 'desc' },
-    })
-
-    const data = payments.map((payment) => ({
+    const data = (payments || []).map((payment) => ({
       Date: new Date(payment.date).toLocaleDateString(),
       Description: payment.description,
-      Amount: `₹${payment.amount.toFixed(2)}`,
+      Amount: `₹${Number(payment.amount).toFixed(2)}`,
       Location: payment.location || 'N/A',
     }))
 
-    const total = payments.reduce((sum, p) => sum + p.amount, 0)
+    const total = (payments || []).reduce((sum, p) => sum + Number(p.amount), 0)
     data.push({
       Date: '',
       Description: 'TOTAL',

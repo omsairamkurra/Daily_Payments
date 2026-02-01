@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/app/providers'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import InvestmentForm from '@/components/InvestmentForm'
@@ -20,7 +20,7 @@ interface Investment {
 }
 
 export default function InvestmentsPage() {
-  const { data: session, status } = useSession()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [investments, setInvestments] = useState<Investment[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,12 +42,12 @@ export default function InvestmentsPage() {
   }, [])
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!authLoading && !user) {
       router.push('/login')
-    } else if (status === 'authenticated') {
+    } else if (!authLoading && user) {
       fetchInvestments()
     }
-  }, [status, router, fetchInvestments])
+  }, [authLoading, user, router, fetchInvestments])
 
   const handleAddInvestment = async (data: {
     name: string
@@ -115,7 +115,7 @@ export default function InvestmentsPage() {
     }
   }
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-gray-600">Loading...</div>
@@ -123,7 +123,7 @@ export default function InvestmentsPage() {
     )
   }
 
-  if (!session) {
+  if (!user) {
     return null
   }
 

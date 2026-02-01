@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/app/providers'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import DateFilter from '@/components/DateFilter'
@@ -19,7 +19,7 @@ interface Payment {
 }
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,12 +50,12 @@ export default function DashboardPage() {
   }, [appliedStartDate, appliedEndDate])
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!authLoading && !user) {
       router.push('/login')
-    } else if (status === 'authenticated') {
+    } else if (!authLoading && user) {
       fetchPayments()
     }
-  }, [status, router, fetchPayments])
+  }, [authLoading, user, router, fetchPayments])
 
   const handleAddPayment = async (data: {
     date: string
@@ -132,7 +132,7 @@ export default function DashboardPage() {
     setAppliedEndDate('')
   }
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-gray-600">Loading...</div>
@@ -140,7 +140,7 @@ export default function DashboardPage() {
     )
   }
 
-  if (!session) {
+  if (!user) {
     return null
   }
 

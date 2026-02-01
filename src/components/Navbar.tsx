@@ -1,12 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { signOut, useSession } from 'next-auth/react'
+import { useAuth } from '@/app/providers'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function Navbar() {
-  const { data: session } = useSession()
+  const { user, signOut } = useAuth()
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push('/')
+    router.refresh()
+  }
 
   return (
     <nav className="bg-white shadow-md">
@@ -18,7 +26,7 @@ export default function Navbar() {
 
           {/* Desktop navigation */}
           <div className="hidden md:flex items-center gap-4">
-            {session?.user && (
+            {user && (
               <>
                 <Link
                   href="/dashboard"
@@ -39,10 +47,10 @@ export default function Navbar() {
                   Investments
                 </Link>
                 <span className="text-gray-600">
-                  {session.user.name || session.user.email}
+                  {user.user_metadata?.name || user.email}
                 </span>
                 <button
-                  onClick={() => signOut({ callbackUrl: '/' })}
+                  onClick={handleSignOut}
                   className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 >
                   Logout
@@ -52,7 +60,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile hamburger button */}
-          {session?.user && (
+          {user && (
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 text-gray-600 hover:text-blue-600 transition-colors"
@@ -85,7 +93,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile menu */}
-        {mobileMenuOpen && session?.user && (
+        {mobileMenuOpen && user && (
           <div className="md:hidden border-t border-gray-200 py-4">
             <div className="flex flex-col gap-3">
               <Link
@@ -111,11 +119,11 @@ export default function Navbar() {
               </Link>
               <div className="border-t border-gray-200 pt-3 mt-2">
                 <span className="text-gray-600 text-sm">
-                  {session.user.name || session.user.email}
+                  {user.user_metadata?.name || user.email}
                 </span>
               </div>
               <button
-                onClick={() => signOut({ callbackUrl: '/' })}
+                onClick={handleSignOut}
                 className="text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors py-2"
               >
                 Logout

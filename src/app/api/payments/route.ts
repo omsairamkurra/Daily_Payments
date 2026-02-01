@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -17,29 +16,28 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
-    const where: {
-      userId: string
-      date?: { gte?: Date; lte?: Date }
-    } = {
-      userId: session.user.id,
+    let query = supabase
+      .from('payments')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+
+    if (startDate) {
+      query = query.gte('date', startDate)
+    }
+    if (endDate) {
+      query = query.lte('date', endDate)
     }
 
-    if (startDate || endDate) {
-      where.date = {}
-      if (startDate) {
-        where.date.gte = new Date(startDate)
-      }
-      if (endDate) {
-        const end = new Date(endDate)
-        end.setHours(23, 59, 59, 999)
-        where.date.lte = end
-      }
-    }
+    const { data: payments, error } = await query
 
-    const payments = await prisma.payment.findMany({
-      where,
-      orderBy: { date: 'desc' },
-    })
+    if (error) {
+      console.error('Error fetching payments:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch payments' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(payments)
   } catch (error) {
@@ -53,9 +51,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -69,15 +68,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const payment = await prisma.payment.create({
-      data: {
-        date: new Date(date),
+    const { data: payment, error } = await supabase
+      .from('payments')
+      .insert({
+        date,
         description,
         amount: parseFloat(amount),
         location,
-        userId: session.user.id,
-      },
-    })
+        user_id: user.id,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating payment:', error)
+      return NextResponse.json(
+        { error: 'Failed to create payment' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(payment, { status: 201 })
   } catch (error) {
@@ -91,9 +100,10 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -107,26 +117,34 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const existingPayment = await prisma.payment.findFirst({
-      where: { id, userId: session.user.id },
-    })
+    const updateData: Record<string, unknown> = {}
+    if (date !== undefined) updateData.date = date
+    if (description !== undefined) updateData.description = description
+    if (amount !== undefined) updateData.amount = parseFloat(amount)
+    if (location !== undefined) updateData.location = location
 
-    if (!existingPayment) {
+    const { data: payment, error } = await supabase
+      .from('payments')
+      .update(updateData)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error updating payment:', error)
+      return NextResponse.json(
+        { error: 'Failed to update payment' },
+        { status: 500 }
+      )
+    }
+
+    if (!payment) {
       return NextResponse.json(
         { error: 'Payment not found' },
         { status: 404 }
       )
     }
-
-    const payment = await prisma.payment.update({
-      where: { id },
-      data: {
-        date: date ? new Date(date) : undefined,
-        description,
-        amount: amount !== undefined ? parseFloat(amount) : undefined,
-        location,
-      },
-    })
 
     return NextResponse.json(payment)
   } catch (error) {
@@ -140,9 +158,10 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -156,18 +175,19 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const existingPayment = await prisma.payment.findFirst({
-      where: { id, userId: session.user.id },
-    })
+    const { error } = await supabase
+      .from('payments')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
 
-    if (!existingPayment) {
+    if (error) {
+      console.error('Error deleting payment:', error)
       return NextResponse.json(
-        { error: 'Payment not found' },
-        { status: 404 }
+        { error: 'Failed to delete payment' },
+        { status: 500 }
       )
     }
-
-    await prisma.payment.delete({ where: { id } })
 
     return NextResponse.json({ message: 'Payment deleted successfully' })
   } catch (error) {

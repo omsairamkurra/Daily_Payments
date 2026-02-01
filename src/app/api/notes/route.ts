@@ -1,22 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const notes = await prisma.note.findMany({
-      where: { userId: session.user.id },
-      orderBy: { updatedAt: 'desc' },
-    })
+    const { data: notes, error } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching notes:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch notes' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(notes)
   } catch (error) {
@@ -30,9 +38,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -46,13 +55,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const note = await prisma.note.create({
-      data: {
+    const { data: note, error } = await supabase
+      .from('notes')
+      .insert({
         title,
         content,
-        userId: session.user.id,
-      },
-    })
+        user_id: user.id,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating note:', error)
+      return NextResponse.json(
+        { error: 'Failed to create note' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(note, { status: 201 })
   } catch (error) {
@@ -66,9 +85,10 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -82,24 +102,32 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const existingNote = await prisma.note.findFirst({
-      where: { id, userId: session.user.id },
-    })
+    const { data: note, error } = await supabase
+      .from('notes')
+      .update({
+        title,
+        content,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single()
 
-    if (!existingNote) {
+    if (error) {
+      console.error('Error updating note:', error)
+      return NextResponse.json(
+        { error: 'Failed to update note' },
+        { status: 500 }
+      )
+    }
+
+    if (!note) {
       return NextResponse.json(
         { error: 'Note not found' },
         { status: 404 }
       )
     }
-
-    const note = await prisma.note.update({
-      where: { id },
-      data: {
-        title,
-        content,
-      },
-    })
 
     return NextResponse.json(note)
   } catch (error) {
@@ -113,9 +141,10 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -129,18 +158,19 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const existingNote = await prisma.note.findFirst({
-      where: { id, userId: session.user.id },
-    })
+    const { error } = await supabase
+      .from('notes')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
 
-    if (!existingNote) {
+    if (error) {
+      console.error('Error deleting note:', error)
       return NextResponse.json(
-        { error: 'Note not found' },
-        { status: 404 }
+        { error: 'Failed to delete note' },
+        { status: 500 }
       )
     }
-
-    await prisma.note.delete({ where: { id } })
 
     return NextResponse.json({ message: 'Note deleted successfully' })
   } catch (error) {

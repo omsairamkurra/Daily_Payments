@@ -1,11 +1,19 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/app/providers'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import NoteForm from '@/components/NoteForm'
 import NoteList from '@/components/NoteList'
+
+interface ApiNote {
+  id: string
+  title: string
+  content: string
+  created_at: string
+  updated_at: string
+}
 
 interface Note {
   id: string
@@ -16,7 +24,7 @@ interface Note {
 }
 
 export default function NotesPage() {
-  const { data: session, status } = useSession()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,8 +35,15 @@ export default function NotesPage() {
     try {
       const response = await fetch('/api/notes')
       if (response.ok) {
-        const data = await response.json()
-        setNotes(data)
+        const data: ApiNote[] = await response.json()
+        // Map snake_case to camelCase
+        setNotes(data.map(n => ({
+          id: n.id,
+          title: n.title,
+          content: n.content,
+          createdAt: n.created_at,
+          updatedAt: n.updated_at,
+        })))
       }
     } catch (error) {
       console.error('Failed to fetch notes:', error)
@@ -38,12 +53,12 @@ export default function NotesPage() {
   }, [])
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!authLoading && !user) {
       router.push('/login')
-    } else if (status === 'authenticated') {
+    } else if (!authLoading && user) {
       fetchNotes()
     }
-  }, [status, router, fetchNotes])
+  }, [authLoading, user, router, fetchNotes])
 
   const handleAddNote = async (data: { title: string; content: string }) => {
     try {
@@ -95,7 +110,7 @@ export default function NotesPage() {
     }
   }
 
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-gray-600">Loading...</div>
@@ -103,7 +118,7 @@ export default function NotesPage() {
     )
   }
 
-  if (!session) {
+  if (!user) {
     return null
   }
 
