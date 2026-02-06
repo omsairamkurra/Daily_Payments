@@ -46,6 +46,30 @@ export default function Navbar() {
                 >
                   Investments
                 </Link>
+                <Link
+                  href="/categories"
+                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  Categories
+                </Link>
+                <Link
+                  href="/recurring"
+                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  Recurring
+                </Link>
+                <Link
+                  href="/loans"
+                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  Loans
+                </Link>
+                <Link
+                  href="/goals"
+                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  Goals
+                </Link>
                 <span className="text-gray-600">
                   {user.user_metadata?.name || user.email}
                 </span>
@@ -116,6 +140,34 @@ export default function Navbar() {
                 className="text-gray-600 hover:text-blue-600 transition-colors py-2"
               >
                 Investments
+              </Link>
+              <Link
+                href="/categories"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-gray-600 hover:text-blue-600 transition-colors py-2"
+              >
+                Categories
+              </Link>
+              <Link
+                href="/recurring"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-gray-600 hover:text-blue-600 transition-colors py-2"
+              >
+                Recurring
+              </Link>
+              <Link
+                href="/loans"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-gray-600 hover:text-blue-600 transition-colors py-2"
+              >
+                Loans
+              </Link>
+              <Link
+                href="/goals"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-gray-600 hover:text-blue-600 transition-colors py-2"
+              >
+                Goals
               </Link>
               <div className="border-t border-gray-200 pt-3 mt-2">
                 <span className="text-gray-600 text-sm">

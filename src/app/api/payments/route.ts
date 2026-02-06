@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { date, description, amount, location } = body
+    const { date, description, amount, location, bank, category } = body
 
     if (!date || !description || amount === undefined) {
       return NextResponse.json(
@@ -75,6 +75,8 @@ export async function POST(request: NextRequest) {
         description,
         amount: parseFloat(amount),
         location,
+        bank: bank || null,
+        category: category || null,
         user_id: user.id,
       })
       .select()
@@ -108,7 +110,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, date, description, amount, location } = body
+    const { id, date, description, amount, location, bank, category } = body
 
     if (!id) {
       return NextResponse.json(
@@ -122,6 +124,8 @@ export async function PUT(request: NextRequest) {
     if (description !== undefined) updateData.description = description
     if (amount !== undefined) updateData.amount = parseFloat(amount)
     if (location !== undefined) updateData.location = location
+    if (bank !== undefined) updateData.bank = bank
+    if (category !== undefined) updateData.category = category
 
     const { data: payment, error } = await supabase
       .from('payments')

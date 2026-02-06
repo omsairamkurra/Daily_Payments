@@ -2,78 +2,86 @@
 
 import { useState } from 'react'
 
-interface Investment {
+interface Loan {
   id: string
   name: string
-  type: string
-  app: string
-  investedAmount: number
-  currentValue: number | null
-  units: number | null
-  purchaseDate: string
+  bank: string
+  loanAmount: number
+  emiAmount: number
+  interestRate: number
+  tenureMonths: number
+  startDate: string
+  paidEmis: number
   notes: string | null
 }
 
-interface InvestmentFormProps {
-  investment?: Investment | null
+interface LoanFormProps {
+  loan?: Loan | null
   onSubmit: (data: {
     name: string
-    type: string
-    app: string
-    investedAmount: number
-    currentValue: number | null
-    units: number | null
-    purchaseDate: string
+    bank: string
+    loanAmount: number
+    emiAmount: number
+    interestRate: number
+    tenureMonths: number
+    startDate: string
+    paidEmis: number
     notes: string | null
   }) => void
   onCancel: () => void
 }
 
-const INVESTMENT_TYPES = [
-  { value: 'mutual_fund', label: 'Mutual Fund' },
-  { value: 'stock', label: 'Stock' },
-  { value: 'sip', label: 'SIP' },
-  { value: 'fd', label: 'Fixed Deposit (FD)' },
-  { value: 'ppf', label: 'PPF' },
-  { value: 'gold', label: 'Gold' },
-  { value: 'silver', label: 'Silver' },
-  { value: 'other', label: 'Other' },
+const BANKS = [
+  'HDFC',
+  'SBI',
+  'Bank of Baroda',
+  'IDFC First Bank',
+  'Union Bank',
+  'Axis',
+  'ICICI',
+  'Indian Bank',
 ]
 
-const INVESTMENT_APPS = ['PhonePe', 'Navi', 'Groww']
-
-export default function InvestmentForm({
-  investment,
+export default function LoanForm({
+  loan,
   onSubmit,
   onCancel,
-}: InvestmentFormProps) {
-  const [name, setName] = useState(investment?.name || '')
-  const [type, setType] = useState(investment?.type || 'mutual_fund')
-  const [app, setApp] = useState(investment?.app || '')
-  const [investedAmount, setInvestedAmount] = useState(
-    investment?.investedAmount?.toString() || ''
+}: LoanFormProps) {
+  const [name, setName] = useState(loan?.name || '')
+  const [bank, setBank] = useState(loan?.bank || '')
+  const [loanAmount, setLoanAmount] = useState(
+    loan?.loanAmount?.toString() || ''
   )
-  const [currentValue, setCurrentValue] = useState(
-    investment?.currentValue?.toString() || ''
+  const [emiAmount, setEmiAmount] = useState(
+    loan?.emiAmount?.toString() || ''
   )
-  const [units, setUnits] = useState(investment?.units?.toString() || '')
-  const [purchaseDate, setPurchaseDate] = useState(
-    investment?.purchaseDate
-      ? new Date(investment.purchaseDate).toISOString().split('T')[0]
+  const [interestRate, setInterestRate] = useState(
+    loan?.interestRate?.toString() || ''
+  )
+  const [tenureMonths, setTenureMonths] = useState(
+    loan?.tenureMonths?.toString() || ''
+  )
+  const [startDate, setStartDate] = useState(
+    loan?.startDate
+      ? new Date(loan.startDate).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0]
   )
-  const [notes, setNotes] = useState(investment?.notes || '')
+  const [paidEmis, setPaidEmis] = useState(
+    loan?.paidEmis?.toString() || '0'
+  )
+  const [notes, setNotes] = useState(loan?.notes || '')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit({
       name,
-      type,
-      app,
-      investedAmount: parseFloat(investedAmount),
-      currentValue: currentValue ? parseFloat(currentValue) : null,
-      units: units ? parseFloat(units) : null,
-      purchaseDate,
+      bank,
+      loanAmount: parseFloat(loanAmount),
+      emiAmount: parseFloat(emiAmount),
+      interestRate: parseFloat(interestRate),
+      tenureMonths: parseInt(tenureMonths),
+      startDate,
+      paidEmis: parseInt(paidEmis) || 0,
       notes: notes || null,
     })
   }
@@ -82,7 +90,7 @@ export default function InvestmentForm({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">
-          {investment ? 'Edit Investment' : 'Add Investment'}
+          {loan ? 'Edit Loan' : 'Add Loan'}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -94,7 +102,7 @@ export default function InvestmentForm({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., HDFC Midcap Fund"
+              placeholder="e.g., Home Loan"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
@@ -102,16 +110,17 @@ export default function InvestmentForm({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type
+              Bank
             </label>
             <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
+              value={bank}
+              onChange={(e) => setBank(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              {INVESTMENT_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
+              <option value="">Select Bank</option>
+              {BANKS.map((b) => (
+                <option key={b} value={b}>
+                  {b}
                 </option>
               ))}
             </select>
@@ -119,33 +128,14 @@ export default function InvestmentForm({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              App
-            </label>
-            <select
-              value={app}
-              onChange={(e) => setApp(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="">Select App</option>
-              {INVESTMENT_APPS.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Invested Amount
+              Loan Amount
             </label>
             <input
               type="number"
               step="0.01"
               min="0"
-              value={investedAmount}
-              onChange={(e) => setInvestedAmount(e.target.value)}
+              value={loanAmount}
+              onChange={(e) => setLoanAmount(e.target.value)}
               placeholder="0.00"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
@@ -154,44 +144,75 @@ export default function InvestmentForm({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Current Value (optional)
+              EMI Amount
             </label>
             <input
               type="number"
               step="0.01"
               min="0"
-              value={currentValue}
-              onChange={(e) => setCurrentValue(e.target.value)}
+              value={emiAmount}
+              onChange={(e) => setEmiAmount(e.target.value)}
               placeholder="0.00"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Units/Shares (optional)
+              Interest Rate %
             </label>
             <input
               type="number"
-              step="0.0001"
+              step="0.01"
               min="0"
-              value={units}
-              onChange={(e) => setUnits(e.target.value)}
-              placeholder="0"
+              value={interestRate}
+              onChange={(e) => setInterestRate(e.target.value)}
+              placeholder="0.00"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Purchase Date
+              Tenure (months)
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={tenureMonths}
+              onChange={(e) => setTenureMonths(e.target.value)}
+              placeholder="12"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Start Date
             </label>
             <input
               type="date"
-              value={purchaseDate}
-              onChange={(e) => setPurchaseDate(e.target.value)}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Paid EMIs
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={paidEmis}
+              onChange={(e) => setPaidEmis(e.target.value)}
+              placeholder="0"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -213,7 +234,7 @@ export default function InvestmentForm({
               type="submit"
               className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
-              {investment ? 'Update' : 'Add'}
+              {loan ? 'Update' : 'Add'}
             </button>
             <button
               type="button"

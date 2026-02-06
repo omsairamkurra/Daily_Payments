@@ -16,6 +16,8 @@ interface Payment {
   description: string
   amount: number
   location: string | null
+  bank: string
+  category: string
 }
 
 export default function DashboardPage() {
@@ -62,6 +64,8 @@ export default function DashboardPage() {
     description: string
     amount: number
     location: string | null
+    bank: string
+    category: string
   }) => {
     try {
       const response = await fetch('/api/payments', {
@@ -85,6 +89,8 @@ export default function DashboardPage() {
     description: string
     amount: number
     location: string | null
+    bank: string
+    category: string
   }) => {
     if (!editingPayment) return
 

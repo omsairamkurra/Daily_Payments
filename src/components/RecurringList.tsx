@@ -1,34 +1,43 @@
 'use client'
 
-interface Payment {
+interface RecurringPayment {
   id: string
-  date: string
-  description: string
+  name: string
   amount: number
-  location: string | null
+  frequency: string
   bank: string
   category: string
+  startDate: string
+  nextDueDate: string
+  isActive: boolean
+  notes: string | null
 }
 
-interface PaymentListProps {
-  payments: Payment[]
-  onEdit: (payment: Payment) => void
+interface RecurringListProps {
+  recurring: RecurringPayment[]
+  onEdit: (recurring: RecurringPayment) => void
   onDelete: (id: string) => void
 }
 
-export default function PaymentList({
-  payments,
+export default function RecurringList({
+  recurring,
   onEdit,
   onDelete,
-}: PaymentListProps) {
-  const total = payments.reduce((sum, p) => sum + p.amount, 0)
-
-  if (payments.length === 0) {
+}: RecurringListProps) {
+  if (recurring.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
-        No payments found. Add your first payment to get started.
+        No recurring payments yet.
       </div>
     )
+  }
+
+  const isOverdue = (dateStr: string) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const dueDate = new Date(dateStr)
+    dueDate.setHours(0, 0, 0, 0)
+    return dueDate <= today
   }
 
   return (
@@ -38,13 +47,13 @@ export default function PaymentList({
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
+                Name
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Amount
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Frequency
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Bank
@@ -53,7 +62,10 @@ export default function PaymentList({
                 Category
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Location
+                Next Due
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
@@ -61,54 +73,61 @@ export default function PaymentList({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {payments.map((payment) => (
-              <tr key={payment.id} className="hover:bg-gray-50">
+            {recurring.map((item) => (
+              <tr
+                key={item.id}
+                className={
+                  isOverdue(item.nextDueDate)
+                    ? 'bg-red-50 hover:bg-red-100'
+                    : 'hover:bg-gray-50'
+                }
+              >
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {new Date(payment.date).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-900">
-                  {payment.description}
+                  {item.name}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                  ₹{payment.amount.toFixed(2)}
+                  {'\u20B9'}{item.amount.toFixed(2)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {payment.bank || 'N/A'}
+                  {item.frequency}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {item.bank || 'N/A'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  {payment.category ? (
+                  {item.category ? (
                     <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                      {payment.category}
+                      {item.category}
                     </span>
                   ) : (
                     'N/A'
                   )}
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
-                  {payment.location ? (
-                    <a
-                      href={`https://www.google.com/maps?q=${payment.location}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      View Map
-                    </a>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {new Date(item.nextDueDate).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  {item.isActive ? (
+                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">
+                      Active
+                    </span>
                   ) : (
-                    'N/A'
+                    <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">
+                      Inactive
+                    </span>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                   <button
-                    onClick={() => onEdit(payment)}
+                    onClick={() => onEdit(item)}
                     className="text-blue-600 hover:text-blue-800 mr-3"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => {
-                      if (confirm('Are you sure you want to delete this payment?')) {
-                        onDelete(payment.id)
+                      if (confirm('Are you sure you want to delete this recurring payment?')) {
+                        onDelete(item.id)
                       }
                     }}
                     className="text-red-600 hover:text-red-800"
@@ -119,17 +138,6 @@ export default function PaymentList({
               </tr>
             ))}
           </tbody>
-          <tfoot className="bg-gray-50">
-            <tr>
-              <td colSpan={2} className="px-6 py-4 text-sm font-semibold text-gray-900">
-                Total
-              </td>
-              <td className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
-                ₹{total.toFixed(2)}
-              </td>
-              <td colSpan={4}></td>
-            </tr>
-          </tfoot>
         </table>
       </div>
     </div>

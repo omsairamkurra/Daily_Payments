@@ -4,6 +4,7 @@ interface Investment {
   id: string
   name: string
   type: string
+  app: string
   investedAmount: number
   currentValue: number | null
   units: number | null
@@ -23,6 +24,8 @@ const TYPE_LABELS: Record<string, string> = {
   sip: 'SIP',
   fd: 'FD',
   ppf: 'PPF',
+  gold: 'Gold',
+  silver: 'Silver',
   other: 'Other',
 }
 
@@ -78,6 +81,9 @@ export default function InvestmentList({
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
                 Type
               </th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                App
+              </th>
               <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
                 Invested
               </th>
@@ -122,6 +128,9 @@ export default function InvestmentList({
                     <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
                       {TYPE_LABELS[investment.type] || investment.type}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {investment.app || 'N/A'}
                   </td>
                   <td className="px-4 py-3 text-right font-medium">
                     {formatCurrency(investment.investedAmount)}

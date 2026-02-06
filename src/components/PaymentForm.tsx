@@ -2,12 +2,37 @@
 
 import { useState, useEffect } from 'react'
 
+const BANKS = [
+  'HDFC',
+  'SBI',
+  'Bank of Baroda',
+  'IDFC First Bank',
+  'Union Bank',
+  'Axis',
+  'ICICI',
+  'Indian Bank',
+]
+
+const CATEGORIES = [
+  'Food',
+  'Transport',
+  'Bills',
+  'Shopping',
+  'Entertainment',
+  'Health',
+  'Education',
+  'Rent',
+  'Other',
+]
+
 interface Payment {
   id: string
   date: string
   description: string
   amount: number
   location: string | null
+  bank: string
+  category: string
 }
 
 interface PaymentFormProps {
@@ -17,6 +42,8 @@ interface PaymentFormProps {
     description: string
     amount: number
     location: string | null
+    bank: string
+    category: string
   }) => void
   onCancel: () => void
 }
@@ -33,6 +60,8 @@ export default function PaymentForm({
   )
   const [description, setDescription] = useState(payment?.description || '')
   const [amount, setAmount] = useState(payment?.amount?.toString() || '')
+  const [bank, setBank] = useState(payment?.bank || '')
+  const [category, setCategory] = useState(payment?.category || '')
   const [location, setLocation] = useState(payment?.location || '')
   const [gettingLocation, setGettingLocation] = useState(false)
   const [locationError, setLocationError] = useState('')
@@ -73,6 +102,8 @@ export default function PaymentForm({
       description,
       amount: parseFloat(amount),
       location: location || null,
+      bank,
+      category,
     })
   }
 
@@ -125,6 +156,44 @@ export default function PaymentForm({
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bank
+            </label>
+            <select
+              value={bank}
+              onChange={(e) => setBank(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            >
+              <option value="">Select Bank</option>
+              {BANKS.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Category
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            >
+              <option value="">Select Category</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

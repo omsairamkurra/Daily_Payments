@@ -12,6 +12,7 @@ interface Investment {
   id: string
   name: string
   type: string
+  app: string
   investedAmount: number
   currentValue: number | null
   units: number | null
@@ -52,6 +53,7 @@ export default function InvestmentsPage() {
   const handleAddInvestment = async (data: {
     name: string
     type: string
+    app: string
     investedAmount: number
     currentValue: number | null
     units: number | null
@@ -77,6 +79,7 @@ export default function InvestmentsPage() {
   const handleEditInvestment = async (data: {
     name: string
     type: string
+    app: string
     investedAmount: number
     currentValue: number | null
     units: number | null

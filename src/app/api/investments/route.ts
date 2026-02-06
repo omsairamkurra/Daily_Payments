@@ -31,6 +31,7 @@ export async function GET() {
       id: inv.id,
       name: inv.name,
       type: inv.type,
+      app: inv.app,
       investedAmount: inv.invested_amount,
       currentValue: inv.current_value,
       units: inv.units,
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, type, investedAmount, currentValue, units, purchaseDate, notes } = body
+    const { name, type, app, investedAmount, currentValue, units, purchaseDate, notes } = body
 
     if (!name || !type || investedAmount === undefined || !purchaseDate) {
       return NextResponse.json(
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name,
         type,
+        app: app || null,
         invested_amount: parseFloat(investedAmount),
         current_value: currentValue ? parseFloat(currentValue) : null,
         units: units ? parseFloat(units) : null,
@@ -97,6 +99,7 @@ export async function POST(request: NextRequest) {
       id: investment.id,
       name: investment.name,
       type: investment.type,
+      app: investment.app,
       investedAmount: investment.invested_amount,
       currentValue: investment.current_value,
       units: investment.units,
@@ -126,7 +129,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, name, type, investedAmount, currentValue, units, purchaseDate, notes } = body
+    const { id, name, type, app, investedAmount, currentValue, units, purchaseDate, notes } = body
 
     if (!id) {
       return NextResponse.json(
@@ -145,6 +148,7 @@ export async function PUT(request: NextRequest) {
     if (units !== undefined) updateData.units = units ? parseFloat(units) : null
     if (purchaseDate !== undefined) updateData.purchase_date = purchaseDate
     if (notes !== undefined) updateData.notes = notes || null
+    if (app !== undefined) updateData.app = app || null
 
     const { data: investment, error } = await supabase
       .from('investments')
@@ -174,6 +178,7 @@ export async function PUT(request: NextRequest) {
       id: investment.id,
       name: investment.name,
       type: investment.type,
+      app: investment.app,
       investedAmount: investment.invested_amount,
       currentValue: investment.current_value,
       units: investment.units,
