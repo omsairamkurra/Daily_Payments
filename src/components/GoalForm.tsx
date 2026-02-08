@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Spinner from './ui/Spinner'
 
 interface Goal {
   id: string
@@ -19,7 +20,7 @@ interface GoalFormProps {
     savedAmount: number
     deadline: string | null
     notes: string | null
-  }) => void
+  }) => void | Promise<void>
   onCancel: () => void
 }
 
@@ -41,16 +42,22 @@ export default function GoalForm({
       : ''
   )
   const [notes, setNotes] = useState(goal?.notes || '')
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit({
-      name,
-      targetAmount: parseFloat(targetAmount),
-      savedAmount: savedAmount ? parseFloat(savedAmount) : 0,
-      deadline: deadline || null,
-      notes: notes || null,
-    })
+    try {
+      setSubmitting(true)
+      await onSubmit({
+        name,
+        targetAmount: parseFloat(targetAmount),
+        savedAmount: savedAmount ? parseFloat(savedAmount) : 0,
+        deadline: deadline || null,
+        notes: notes || null,
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -134,8 +141,10 @@ export default function GoalForm({
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              disabled={submitting}
+              className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
+              {submitting && <Spinner size="sm" className="text-white" />}
               {goal ? 'Update' : 'Add'}
             </button>
             <button

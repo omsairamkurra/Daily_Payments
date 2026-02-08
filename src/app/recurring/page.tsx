@@ -6,6 +6,10 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import RecurringForm from '@/components/RecurringForm'
 import RecurringList from '@/components/RecurringList'
+import PageLoader from '@/components/ui/PageLoader'
+import RefreshButton from '@/components/ui/RefreshButton'
+import DateFilter from '@/components/DateFilter'
+import RecurringView from '@/components/RecurringView'
 
 interface RecurringPayment {
   id: string
@@ -27,10 +31,19 @@ export default function RecurringPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingRecurring, setEditingRecurring] = useState<RecurringPayment | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [viewingRecurring, setViewingRecurring] = useState<RecurringPayment | null>(null)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [appliedStartDate, setAppliedStartDate] = useState('')
+  const [appliedEndDate, setAppliedEndDate] = useState('')
 
   const fetchRecurring = useCallback(async () => {
     try {
-      const response = await fetch('/api/recurring')
+      const params = new URLSearchParams()
+      if (appliedStartDate) params.set('startDate', appliedStartDate)
+      if (appliedEndDate) params.set('endDate', appliedEndDate)
+      const response = await fetch(`/api/recurring?${params.toString()}`)
       if (response.ok) {
         const data = await response.json()
         setRecurring(data)
@@ -40,7 +53,7 @@ export default function RecurringPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [appliedStartDate, appliedEndDate])
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -49,6 +62,24 @@ export default function RecurringPage() {
       fetchRecurring()
     }
   }, [authLoading, user, router, fetchRecurring])
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await fetchRecurring()
+    setRefreshing(false)
+  }
+
+  const applyFilter = () => {
+    setAppliedStartDate(startDate)
+    setAppliedEndDate(endDate)
+  }
+
+  const clearFilter = () => {
+    setStartDate('')
+    setEndDate('')
+    setAppliedStartDate('')
+    setAppliedEndDate('')
+  }
 
   const handleAdd = async (data: Omit<RecurringPayment, 'id'>) => {
     try {
@@ -101,11 +132,7 @@ export default function RecurringPage() {
   }
 
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
-      </div>
-    )
+    return <PageLoader />
   }
 
   if (!user) {
@@ -113,24 +140,37 @@ export default function RecurringPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Navbar />
 
       <main className="container mx-auto px-4 py-8">
         <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-6">
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Recurring Payments</h1>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-4 md:px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm md:text-base"
-          >
-            Add Recurring Payment
-          </button>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Recurring Payments</h1>
+          <div className="flex gap-2">
+            <RefreshButton onClick={handleRefresh} isRefreshing={refreshing} />
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-4 md:px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm md:text-base"
+            >
+              Add Recurring Payment
+            </button>
+          </div>
         </div>
+
+        <DateFilter
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          onApply={applyFilter}
+          onClear={clearFilter}
+        />
 
         <RecurringList
           recurring={recurring}
           onEdit={(item) => setEditingRecurring(item)}
           onDelete={handleDelete}
+          onView={(item) => setViewingRecurring(item)}
         />
       </main>
 
@@ -146,6 +186,17 @@ export default function RecurringPage() {
           recurring={editingRecurring}
           onSubmit={handleEdit}
           onCancel={() => setEditingRecurring(null)}
+        />
+      )}
+
+      {viewingRecurring && (
+        <RecurringView
+          recurring={viewingRecurring}
+          onClose={() => setViewingRecurring(null)}
+          onEdit={() => {
+            setEditingRecurring(viewingRecurring)
+            setViewingRecurring(null)
+          }}
         />
       )}
     </div>

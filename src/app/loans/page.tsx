@@ -6,6 +6,10 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import LoanForm from '@/components/LoanForm'
 import LoanList from '@/components/LoanList'
+import PageLoader from '@/components/ui/PageLoader'
+import RefreshButton from '@/components/ui/RefreshButton'
+import DateFilter from '@/components/DateFilter'
+import LoanView from '@/components/LoanView'
 
 interface Loan {
   id: string
@@ -27,10 +31,19 @@ export default function LoansPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [viewingLoan, setViewingLoan] = useState<Loan | null>(null)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [appliedStartDate, setAppliedStartDate] = useState('')
+  const [appliedEndDate, setAppliedEndDate] = useState('')
 
   const fetchLoans = useCallback(async () => {
     try {
-      const response = await fetch('/api/loans')
+      const params = new URLSearchParams()
+      if (appliedStartDate) params.set('startDate', appliedStartDate)
+      if (appliedEndDate) params.set('endDate', appliedEndDate)
+      const response = await fetch(`/api/loans?${params.toString()}`)
       if (response.ok) {
         const data = await response.json()
         setLoans(data)
@@ -40,7 +53,7 @@ export default function LoansPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [appliedStartDate, appliedEndDate])
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -49,6 +62,24 @@ export default function LoansPage() {
       fetchLoans()
     }
   }, [authLoading, user, router, fetchLoans])
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await fetchLoans()
+    setRefreshing(false)
+  }
+
+  const applyFilter = () => {
+    setAppliedStartDate(startDate)
+    setAppliedEndDate(endDate)
+  }
+
+  const clearFilter = () => {
+    setStartDate('')
+    setEndDate('')
+    setAppliedStartDate('')
+    setAppliedEndDate('')
+  }
 
   const handleAddLoan = async (data: {
     name: string
@@ -121,11 +152,7 @@ export default function LoansPage() {
   }
 
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
-      </div>
-    )
+    return <PageLoader />
   }
 
   if (!user) {
@@ -133,24 +160,37 @@ export default function LoansPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Navbar />
 
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">EMI / Loan Tracker</h1>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            Add Loan
-          </button>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">EMI / Loan Tracker</h1>
+          <div className="flex gap-2">
+            <RefreshButton onClick={handleRefresh} isRefreshing={refreshing} />
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Add Loan
+            </button>
+          </div>
         </div>
+
+        <DateFilter
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          onApply={applyFilter}
+          onClear={clearFilter}
+        />
 
         <LoanList
           loans={loans}
           onEdit={(loan) => setEditingLoan(loan)}
           onDelete={handleDeleteLoan}
+          onView={(loan) => setViewingLoan(loan)}
         />
       </main>
 
@@ -166,6 +206,17 @@ export default function LoansPage() {
           loan={editingLoan}
           onSubmit={handleEditLoan}
           onCancel={() => setEditingLoan(null)}
+        />
+      )}
+
+      {viewingLoan && (
+        <LoanView
+          loan={viewingLoan}
+          onClose={() => setViewingLoan(null)}
+          onEdit={() => {
+            setEditingLoan(viewingLoan)
+            setViewingLoan(null)
+          }}
         />
       )}
     </div>

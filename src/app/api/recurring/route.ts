@@ -12,11 +12,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: recurring, error } = await supabase
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+
+    let query = supabase
       .from('recurring_payments')
       .select('*')
       .eq('user_id', user.id)
       .order('next_due_date', { ascending: true })
+
+    if (startDate) query = query.gte('next_due_date', startDate)
+    if (endDate) query = query.lte('next_due_date', endDate)
+
+    const { data: recurring, error } = await query
 
     if (error) {
       console.error('Error fetching recurring payments:', error)
@@ -37,6 +46,7 @@ export async function GET(request: NextRequest) {
       nextDueDate: r.next_due_date,
       isActive: r.is_active,
       notes: r.notes,
+      goalId: r.goal_id,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     }))
@@ -61,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, amount, frequency, startDate, nextDueDate, bank, category, notes, isActive } = body
+    const { name, amount, frequency, startDate, nextDueDate, bank, category, notes, isActive, goalId } = body
 
     if (!name || amount === undefined || !frequency || !startDate || !nextDueDate) {
       return NextResponse.json(
@@ -82,6 +92,7 @@ export async function POST(request: NextRequest) {
         next_due_date: nextDueDate,
         is_active: isActive !== undefined ? isActive : true,
         notes: notes || null,
+        goal_id: goalId || null,
         user_id: user.id,
       })
       .select()
@@ -115,7 +126,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, name, amount, frequency, startDate, nextDueDate, bank, category, notes, isActive } = body
+    const { id, name, amount, frequency, startDate, nextDueDate, bank, category, notes, isActive, goalId } = body
 
     if (!id) {
       return NextResponse.json(
@@ -136,6 +147,7 @@ export async function PUT(request: NextRequest) {
     if (nextDueDate !== undefined) updateData.next_due_date = nextDueDate
     if (isActive !== undefined) updateData.is_active = isActive
     if (notes !== undefined) updateData.notes = notes
+    if (goalId !== undefined) updateData.goal_id = goalId || null
 
     const { data: recurring, error } = await supabase
       .from('recurring_payments')

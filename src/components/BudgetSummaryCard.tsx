@@ -85,10 +85,10 @@ export default function BudgetSummaryCard({ refreshKey }: BudgetSummaryCardProps
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
         </div>
       </div>
     )
@@ -97,13 +97,13 @@ export default function BudgetSummaryCard({ refreshKey }: BudgetSummaryCardProps
   if (!budgetData?.budget) {
     return (
       <>
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-lg font-semibold text-gray-700">
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">
                 {getMonthName(currentMonth)} {currentYear} Budget
               </h3>
-              <p className="text-gray-500 mt-1">No budget set for this month</p>
+              <p className="text-gray-500 dark:text-gray-400 mt-1">No budget set for this month</p>
             </div>
             <button
               onClick={() => setShowForm(true)}
@@ -132,9 +132,9 @@ export default function BudgetSummaryCard({ refreshKey }: BudgetSummaryCardProps
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
         <div className="flex justify-between items-start mb-4">
-          <h3 className="text-lg font-semibold text-gray-700">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">
             {getMonthName(budget.month)} {budget.year} Budget
           </h3>
           <button
@@ -147,19 +147,19 @@ export default function BudgetSummaryCard({ refreshKey }: BudgetSummaryCardProps
 
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="text-center">
-            <p className="text-sm text-gray-500 mb-1">Budget</p>
-            <p className="text-xl font-bold text-gray-900">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Budget</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-white">
               {formatCurrency(budget.salary)}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-sm text-gray-500 mb-1">Spent</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Spent</p>
             <p className="text-xl font-bold text-orange-600">
               {formatCurrency(totalSpent)}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-sm text-gray-500 mb-1">Remaining</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Remaining</p>
             <p
               className={`text-xl font-bold ${
                 isOverBudget ? 'text-red-600' : 'text-green-600'
@@ -170,7 +170,7 @@ export default function BudgetSummaryCard({ refreshKey }: BudgetSummaryCardProps
           </div>
         </div>
 
-        <div className="w-full bg-gray-200 rounded-full h-3">
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
           <div
             className={`h-3 rounded-full transition-all ${
               spentPercentage > 100
@@ -182,7 +182,7 @@ export default function BudgetSummaryCard({ refreshKey }: BudgetSummaryCardProps
             style={{ width: `${Math.min(spentPercentage, 100)}%` }}
           ></div>
         </div>
-        <p className="text-sm text-gray-500 mt-2 text-center">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
           {spentPercentage.toFixed(1)}% of budget used
         </p>
       </div>

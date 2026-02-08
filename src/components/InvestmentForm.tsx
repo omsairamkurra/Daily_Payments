@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Spinner from './ui/Spinner'
 
 interface Investment {
   id: string
@@ -12,6 +13,18 @@ interface Investment {
   units: number | null
   purchaseDate: string
   notes: string | null
+  frequency?: string
+  isSip?: boolean
+  sipAmount?: number | null
+  nextSipDate?: string | null
+  goalId?: string | null
+}
+
+interface Goal {
+  id: string
+  name: string
+  targetAmount: number
+  savedAmount: number
 }
 
 interface InvestmentFormProps {
@@ -25,7 +38,12 @@ interface InvestmentFormProps {
     units: number | null
     purchaseDate: string
     notes: string | null
-  }) => void
+    frequency: string
+    isSip: boolean
+    sipAmount: number | null
+    nextSipDate: string | null
+    goalId: string | null
+  }) => void | Promise<void>
   onCancel: () => void
 }
 
@@ -40,7 +58,17 @@ const INVESTMENT_TYPES = [
   { value: 'other', label: 'Other' },
 ]
 
-const INVESTMENT_APPS = ['PhonePe', 'Navi', 'Groww']
+const INVESTMENT_APPS = [
+  'PhonePe', 'Navi', 'Groww', 'Zerodha', 'Upstox',
+  'Angel One', 'Paytm Money', 'SBI YONO', 'CAMS', 'MFCentral', 'Other'
+]
+
+const FREQUENCIES = [
+  { value: 'one_time', label: 'One-time' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+]
 
 export default function InvestmentForm({
   investment,
@@ -63,19 +91,53 @@ export default function InvestmentForm({
       : new Date().toISOString().split('T')[0]
   )
   const [notes, setNotes] = useState(investment?.notes || '')
+  const [frequency, setFrequency] = useState(investment?.frequency || 'one_time')
+  const [sipAmount, setSipAmount] = useState(investment?.sipAmount?.toString() || '')
+  const [nextSipDate, setNextSipDate] = useState(
+    investment?.nextSipDate
+      ? new Date(investment.nextSipDate).toISOString().split('T')[0]
+      : ''
+  )
+  const [goalId, setGoalId] = useState(investment?.goalId || '')
+  const [goals, setGoals] = useState<Goal[]>([])
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetch('/api/goals')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setGoals(data))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (type === 'sip') {
+      setFrequency('monthly')
+    }
+  }, [type])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit({
-      name,
-      type,
-      app,
-      investedAmount: parseFloat(investedAmount),
-      currentValue: currentValue ? parseFloat(currentValue) : null,
-      units: units ? parseFloat(units) : null,
-      purchaseDate,
-      notes: notes || null,
-    })
+    setSubmitting(true)
+    try {
+      const isSip = frequency !== 'one_time'
+      await onSubmit({
+        name,
+        type,
+        app,
+        investedAmount: parseFloat(investedAmount),
+        currentValue: currentValue ? parseFloat(currentValue) : null,
+        units: units ? parseFloat(units) : null,
+        purchaseDate,
+        notes: notes || null,
+        frequency,
+        isSip,
+        sipAmount: sipAmount ? parseFloat(sipAmount) : null,
+        nextSipDate: nextSipDate || null,
+        goalId: goalId || null,
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -119,18 +181,34 @@ export default function InvestmentForm({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              App
+              App (optional)
             </label>
             <select
               value={app}
               onChange={(e) => setApp(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
             >
               <option value="">Select App</option>
               {INVESTMENT_APPS.map((a) => (
                 <option key={a} value={a}>
                   {a}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Frequency
+            </label>
+            <select
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {FREQUENCIES.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
                 </option>
               ))}
             </select>
@@ -151,6 +229,36 @@ export default function InvestmentForm({
               required
             />
           </div>
+
+          {frequency !== 'one_time' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  SIP Amount
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={sipAmount}
+                  onChange={(e) => setSipAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Next SIP Date
+                </label>
+                <input
+                  type="date"
+                  value={nextSipDate}
+                  onChange={(e) => setNextSipDate(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -195,6 +303,26 @@ export default function InvestmentForm({
             />
           </div>
 
+          {goals.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Link to Goal (optional)
+              </label>
+              <select
+                value={goalId}
+                onChange={(e) => setGoalId(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">No goal linked</option>
+                {goals.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Notes (optional)
@@ -211,8 +339,10 @@ export default function InvestmentForm({
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              disabled={submitting}
+              className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
+              {submitting && <Spinner size="sm" className="text-white" />}
               {investment ? 'Update' : 'Add'}
             </button>
             <button

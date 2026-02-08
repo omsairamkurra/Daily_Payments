@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -12,11 +12,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: goals, error } = await supabase
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+
+    let query = supabase
       .from('savings_goals')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
+
+    if (startDate) query = query.gte('created_at', startDate)
+    if (endDate) query = query.lte('created_at', endDate + 'T23:59:59')
+
+    const { data: goals, error } = await query
 
     if (error) {
       console.error('Error fetching goals:', error)

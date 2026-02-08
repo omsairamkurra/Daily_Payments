@@ -6,8 +6,11 @@ import { Providers } from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Daily Payments Tracker',
-  description: 'Track your daily payments with location capture',
+  title: 'OSRK Payments',
+  description: 'Track your daily payments, investments, and finances',
+  icons: {
+    icon: '/icon.svg',
+  },
 }
 
 export default function RootLayout({
@@ -16,8 +19,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} bg-white dark:bg-gray-900 text-gray-900 dark:text-white`}>
         <Providers>{children}</Providers>
       </body>
     </html>

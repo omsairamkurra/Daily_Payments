@@ -3,6 +3,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { User, Session } from '@supabase/supabase-js'
+import { ThemeProvider } from '@/lib/theme-context'
+import { SettingsProvider } from '@/lib/settings-context'
 
 type AuthContextType = {
   user: User | null
@@ -54,7 +56,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, session, loading, signOut }}>
-      {children}
+      <ThemeProvider>
+        <SettingsProvider>
+          {children}
+        </SettingsProvider>
+      </ThemeProvider>
     </AuthContext.Provider>
   )
 }

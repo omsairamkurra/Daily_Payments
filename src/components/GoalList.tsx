@@ -11,12 +11,14 @@ interface Goal {
 
 interface GoalListProps {
   goals: Goal[]
+  onView: (goal: Goal) => void
   onEdit: (goal: Goal) => void
   onDelete: (id: string) => void
 }
 
 export default function GoalList({
   goals,
+  onView,
   onEdit,
   onDelete,
 }: GoalListProps) {
@@ -109,6 +111,12 @@ export default function GoalList({
             </div>
 
             <div className="flex gap-2 pt-2 border-t border-gray-100">
+              <button
+                onClick={() => onView(goal)}
+                className="flex-1 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded transition-colors font-medium"
+              >
+                View
+              </button>
               <button
                 onClick={() => onEdit(goal)}
                 className="flex-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors font-medium"

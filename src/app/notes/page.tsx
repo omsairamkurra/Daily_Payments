@@ -6,6 +6,10 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import NoteForm from '@/components/NoteForm'
 import NoteList from '@/components/NoteList'
+import PageLoader from '@/components/ui/PageLoader'
+import RefreshButton from '@/components/ui/RefreshButton'
+import DateFilter from '@/components/DateFilter'
+import NoteView from '@/components/NoteView'
 
 interface ApiNote {
   id: string
@@ -30,10 +34,19 @@ export default function NotesPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [viewingNote, setViewingNote] = useState<Note | null>(null)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [appliedStartDate, setAppliedStartDate] = useState('')
+  const [appliedEndDate, setAppliedEndDate] = useState('')
 
   const fetchNotes = useCallback(async () => {
     try {
-      const response = await fetch('/api/notes')
+      const params = new URLSearchParams()
+      if (appliedStartDate) params.set('startDate', appliedStartDate)
+      if (appliedEndDate) params.set('endDate', appliedEndDate)
+      const response = await fetch(`/api/notes?${params.toString()}`)
       if (response.ok) {
         const data: ApiNote[] = await response.json()
         // Map snake_case to camelCase
@@ -50,7 +63,7 @@ export default function NotesPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [appliedStartDate, appliedEndDate])
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -59,6 +72,24 @@ export default function NotesPage() {
       fetchNotes()
     }
   }, [authLoading, user, router, fetchNotes])
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await fetchNotes()
+    setRefreshing(false)
+  }
+
+  const applyFilter = () => {
+    setAppliedStartDate(startDate)
+    setAppliedEndDate(endDate)
+  }
+
+  const clearFilter = () => {
+    setStartDate('')
+    setEndDate('')
+    setAppliedStartDate('')
+    setAppliedEndDate('')
+  }
 
   const handleAddNote = async (data: { title: string; content: string }) => {
     try {
@@ -111,11 +142,7 @@ export default function NotesPage() {
   }
 
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
-      </div>
-    )
+    return <PageLoader />
   }
 
   if (!user) {
@@ -123,24 +150,37 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Navbar />
 
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">My Notes</h1>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            Add Note
-          </button>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Notes</h1>
+          <div className="flex gap-2">
+            <RefreshButton onClick={handleRefresh} isRefreshing={refreshing} />
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Add Note
+            </button>
+          </div>
         </div>
+
+        <DateFilter
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          onApply={applyFilter}
+          onClear={clearFilter}
+        />
 
         <NoteList
           notes={notes}
           onEdit={(note) => setEditingNote(note)}
           onDelete={handleDeleteNote}
+          onView={(note) => setViewingNote(note)}
         />
       </main>
 
@@ -156,6 +196,17 @@ export default function NotesPage() {
           note={editingNote}
           onSubmit={handleEditNote}
           onCancel={() => setEditingNote(null)}
+        />
+      )}
+
+      {viewingNote && (
+        <NoteView
+          note={viewingNote}
+          onClose={() => setViewingNote(null)}
+          onEdit={() => {
+            setEditingNote(viewingNote)
+            setViewingNote(null)
+          }}
         />
       )}
     </div>

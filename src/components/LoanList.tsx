@@ -15,12 +15,14 @@ interface Loan {
 
 interface LoanListProps {
   loans: Loan[]
+  onView: (loan: Loan) => void
   onEdit: (loan: Loan) => void
   onDelete: (id: string) => void
 }
 
 export default function LoanList({
   loans,
+  onView,
   onEdit,
   onDelete,
 }: LoanListProps) {
@@ -115,6 +117,12 @@ export default function LoanList({
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+              <button
+                onClick={() => onView(loan)}
+                className="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded transition-colors"
+              >
+                View
+              </button>
               <button
                 onClick={() => onEdit(loan)}
                 className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"

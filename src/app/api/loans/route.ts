@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -12,11 +12,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: loans, error } = await supabase
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+
+    let query = supabase
       .from('loans')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
+
+    if (startDate) query = query.gte('start_date', startDate)
+    if (endDate) query = query.lte('start_date', endDate)
+
+    const { data: loans, error } = await query
 
     if (error) {
       console.error('Error fetching loans:', error)

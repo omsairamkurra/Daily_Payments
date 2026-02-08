@@ -1,6 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Spinner from './ui/Spinner'
+
+interface Goal {
+  id: string
+  name: string
+  targetAmount: number
+  savedAmount: number
+}
 
 const BANKS = [
   'HDFC',
@@ -42,7 +50,7 @@ interface RecurringPayment {
 
 interface RecurringFormProps {
   recurring?: RecurringPayment | null
-  onSubmit: (data: Omit<RecurringPayment, 'id'>) => void
+  onSubmit: (data: Omit<RecurringPayment, 'id'>) => void | Promise<void>
   onCancel: () => void
 }
 
@@ -70,20 +78,35 @@ export default function RecurringForm({
     recurring?.isActive !== undefined ? recurring.isActive : true
   )
   const [notes, setNotes] = useState(recurring?.notes || '')
+  const [goalId, setGoalId] = useState('')
+  const [goals, setGoals] = useState<Goal[]>([])
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetch('/api/goals')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setGoals(data))
+      .catch(() => {})
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit({
-      name,
-      amount: parseFloat(amount),
-      frequency,
-      bank,
-      category,
-      startDate,
-      nextDueDate,
-      isActive,
-      notes: notes || null,
-    })
+    try {
+      setSubmitting(true)
+      await onSubmit({
+        name,
+        amount: parseFloat(amount),
+        frequency,
+        bank,
+        category,
+        startDate,
+        nextDueDate,
+        isActive,
+        notes: notes || null,
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -218,6 +241,26 @@ export default function RecurringForm({
             </label>
           </div>
 
+          {goals.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Link to Goal (optional)
+              </label>
+              <select
+                value={goalId}
+                onChange={(e) => setGoalId(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">No goal linked</option>
+                {goals.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Notes
@@ -234,8 +277,10 @@ export default function RecurringForm({
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              disabled={submitting}
+              className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
+              {submitting && <Spinner size="sm" className="text-white" />}
               {recurring ? 'Update' : 'Add'}
             </button>
             <button
